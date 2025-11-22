@@ -2,32 +2,475 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MindScape</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIMELINE WARS | Chronos Battle Interface</title>
+    
+    <!-- Fonts: Cinzel (Epic), Merriweather (Newspaper/Body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Merriweather:ital,wght@0,300;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        :root {
+            --paper-color: #e8dcc5;
+            --ink-color: #1a1a1a;
+            --gold-accent: #c5a059;
+            --war-room-bg: #0f0f0f;
+            --card-bg: #1e1e1e;
+        }
+        
+        body {
+            font-family: 'Merriweather', serif;
+            background-color: var(--war-room-bg);
+            color: #d4d4d4;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(30,30,30,1) 0%, rgba(10,10,10,1) 100%);
+        }
+
+        h1, h2, h3, h4, button, .cinzel {
+            font-family: 'Cinzel', serif;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold-accent); }
+
+        /* Animations */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+        .float-hover:hover { animation: float 2s infinite ease-in-out; }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px rgba(197, 160, 89, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(197, 160, 89, 0.6); }
+            100% { box-shadow: 0 0 5px rgba(197, 160, 89, 0.2); }
+        }
+
+        /* Newspaper Texture */
+        .paper-texture {
+            background-color: var(--paper-color);
+            background-image: url("https://www.transparenttextures.com/patterns/aged-paper.png");
+            color: var(--ink-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        /* CRT Scanline Overlay */
+        .scanlines {
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px;
+            position: absolute;
+            pointer-events: none;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 50;
+            opacity: 0.15;
+        }
+
+        .gold-text {
+            background: linear-gradient(to bottom, #ffd700, #c5a059, #8a6e3c);
+            
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
 </head>
 <body>
+    <div id="root"></div>
 
-<nav>
-    <h1>MindScape</h1>
-</nav>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-<section class="cards">
-    <a href="modules/psychlens/psych.html" class="card">
-        <h2>PsychLens</h2>
-        <p>Understand your thinking patterns.</p>
-    </a>
+        // --- DATA: THE CRISIS CARDS ---
+        const SCENARIOS = [
+            {
+                id: 1,
+                year: "1914 AD",
+                title: "The Spark in Sarajevo",
+                description: "Archduke Franz Ferdinand is in the crosshairs. The Great War looms.",
+                context: "Europe is a powder keg. A network of alliances means one bullet could trigger a world war.",
+                img: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Gavrilo_Princip_assassinates_Franz_Ferdinand.jpg/640px-Gavrilo_Princip_assassinates_Franz_Ferdinand.jpg" // Placeholder or public domain
+            },
+            {
+                id: 2,
+                year: "1962 AD",
+                title: "Nuclear Standoff",
+                description: "Soviet missiles are spotted in Cuba. The Doomsday Clock hits 11:59.",
+                context: "The US and USSR are locked in a stalemate. Any aggression guarantees mutual destruction.",
+                img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Cuban_crisis_map_missile_range.jpg/640px-Cuban_crisis_map_missile_range.jpg"
+            },
+            {
+                id: 3,
+                year: "44 BC",
+                title: "The Ides of March",
+                description: "Senators plot against Caesar to 'save the Republic'. Rome teeters on the edge.",
+                context: "Julius Caesar has been declared Dictator Perpetuo. The Senate fears a monarchy.",
+                img: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Vincenzo_Camuccini_-_La_morte_di_Cesare.jpg/640px-Vincenzo_Camuccini_-_La_morte_di_Cesare.jpg"
+            },
+            {
+                id: 4,
+                year: "2020 AD",
+                title: "The Silent Spreader",
+                description: "A novel virus emerges. Global supply chains and healthcare systems face collapse.",
+                context: "Modern globalization has made the world smaller, but more fragile to biological threats.",
+                img: "https://images.unsplash.com/photo-1584036561566-b452b9ee8051?q=80&w=1000&auto=format&fit=crop"
+            }
+        ];
 
-    <a href="modules/geomind/geo.html" class="card">
-        <h2>GeoMind</h2>
-        <p>Experience geopolitics through interactive choices.</p>
-    </a>
+        // --- COMPONENTS ---
 
-    <a href="modules/history/history.html" class="card">
-        <h2>History Reimagined</h2>
-        <p>Create alternate timelines with AI.</p>
-    </a>
-</section>
+        const Header = () => (
+            <header className="w-full py-8 border-b border-gray-800 bg-black/50 text-center relative">
+                <h1 className="text-5xl md:text-6xl font-black tracking-[0.2em] uppercase cinzel text-gray-200">
+                    Timeline Wars
+                </h1>
+                <div className="h-1 w-32 mx-auto bg-yellow-700 mt-4"></div>
+                <p className="text-xs text-yellow-600 mt-2 uppercase tracking-widest">
+                    History is Written by the Victors
+                </p>
+            </header>
+        );
 
-<script src="app.js"></script>
+        const ScenarioCard = ({ scenario, onClick }) => (
+            <div 
+                onClick={() => onClick(scenario)}
+                className="group cursor-pointer bg-gray-900 border border-gray-700 hover:border-yellow-600 transition-all duration-300 transform hover:-translate-y-2 overflow-hidden relative h-80 flex flex-col"
+            >
+                <div className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity duration-500">
+                    <img src={scenario.img} alt={scenario.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
+                
+                <div className="relative z-10 p-6 mt-auto">
+                    <div className="text-yellow-600 text-xs font-bold tracking-widest mb-1 cinzel border-b border-yellow-800 inline-block pb-1">{scenario.year}</div>
+                    <h3 className="text-2xl font-bold text-gray-100 mb-2 cinzel group-hover:text-yellow-400 transition-colors">{scenario.title}</h3>
+                    <p className="text-gray-400 text-sm line-clamp-3">{scenario.description}</p>
+                </div>
+            </div>
+        );
+
+        const DecisionInput = ({ label, placeholder, value, onChange, side }) => (
+            <div className={`p-6 border-l-4 ${side === 'A' ? 'border-blue-600 bg-blue-900/10' : 'border-red-600 bg-red-900/10'} mb-6`}>
+                <label className={`block text-lg font-bold mb-3 uppercase tracking-wider cinzel ${side === 'A' ? 'text-blue-400' : 'text-red-400'}`}>
+                    {label}
+                </label>
+                <textarea 
+                    className="w-full bg-black/50 text-gray-200 border border-gray-700 p-4 focus:outline-none focus:border-gray-500 transition-colors font-serif text-lg resize-none h-32 placeholder-gray-600"
+                    placeholder={placeholder}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                />
+            </div>
+        );
+
+        const Newspaper = ({ data, side }) => {
+            if (!data) return <div className="h-full min-h-[200px] flex items-center justify-center border border-gray-800 text-gray-600 text-sm uppercase tracking-widest">Awaiting History...</div>;
+
+            return (
+                <div className="paper-texture p-6 text-black transform transition-all duration-700 animate-fade-in">
+                    <div className="border-b-2 border-black mb-3 pb-1 flex justify-between items-end opacity-70">
+                        <span className="text-[10px] font-bold uppercase tracking-widest">The Global Observer</span>
+                        <span className="text-[10px] italic">{data.date}</span>
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-black leading-none mb-3 font-serif uppercase">{data.headline}</h2>
+                    <p className="text-sm leading-relaxed font-serif text-justify opacity-90 border-t border-black pt-3">
+                        <span className="float-left text-3xl mr-2 font-black leading-none mt-[-5px]">{data.snippet.charAt(0)}</span>
+                        {data.snippet.substring(1)}
+                    </p>
+                    <div className={`mt-4 text-[10px] uppercase font-bold tracking-widest text-center border p-1 ${side === 'A' ? 'border-blue-800 text-blue-900' : 'border-red-800 text-red-900'}`}>
+                        Timeline {side}
+                    </div>
+                </div>
+            );
+        };
+
+        const ProgressBar = ({ label, value, colorClass }) => (
+            <div className="mb-3 group">
+                <div className="flex justify-between mb-1 text-[10px] uppercase tracking-widest font-bold text-gray-400 group-hover:text-white transition-colors">
+                    <span>{label}</span>
+                    <span>{value}/100</span>
+                </div>
+                <div className="w-full bg-gray-800 h-1.5 overflow-hidden">
+                    <div 
+                        className={`h-full transition-all duration-1000 ease-out ${colorClass}`} 
+                        style={{ width: `${value}%` }}
+                    ></div>
+                </div>
+            </div>
+        );
+
+        // --- MOCK DATA GENERATORS ---
+        const generateMockJudge = (sA, sB) => {
+            // Simple randomization biased by input length just for variety
+            const bias = (sA.length > sB.length) ? 5 : -5;
+            const scoreA = Math.min(95, Math.max(40, Math.floor(Math.random() * 40) + 50 + bias));
+            const scoreB = Math.min(95, Math.max(40, Math.floor(Math.random() * 40) + 50 - bias));
+            
+            return {
+                winner: scoreA > scoreB ? "Timeline Alpha" : "Timeline Omega",
+                score_a: scoreA,
+                score_b: scoreB,
+                reasoning: scoreA > scoreB 
+                    ? "Timeline Alpha's decisive action stabilized the economy early, allowing for superior military buildup." 
+                    : "Timeline Omega's focus on long-term diplomacy created a robust alliance network that isolated Alpha.",
+            };
+        };
+
+        const generateHeadline = (text) => {
+            const topics = ["WAR", "PEACE", "CRISIS", "BOOM", "COLLAPSE"];
+            const randTopic = topics[Math.floor(Math.random() * topics.length)];
+            return {
+                headline: `WORLD REACTS: ${randTopic} IMMINENT`,
+                date: "October, 19XX",
+                snippet: `Following the decision to ${text.substring(0, 20)}..., markets have shifted dramatically. Sources indicate a major realignment of global powers is underway.`
+            };
+        };
+
+        // --- MAIN APP ---
+
+        const App = () => {
+            const [phase, setPhase] = useState('select'); // select -> diverge -> battle -> result
+            const [selectedScenario, setSelectedScenario] = useState(null);
+            
+            const [inputA, setInputA] = useState("");
+            const [inputB, setInputB] = useState("");
+            
+            const [battleLog, setBattleLog] = useState([]);
+            const [result, setResult] = useState(null);
+            const [newsA, setNewsA] = useState(null);
+            const [newsB, setNewsB] = useState(null);
+            
+            // Visual Stats
+            const [statsA, setStatsA] = useState({ mil: 0, eco: 0, tech: 0 });
+            const [statsB, setStatsB] = useState({ mil: 0, eco: 0, tech: 0 });
+
+            const handleSelectScenario = (scenario) => {
+                setSelectedScenario(scenario);
+                setPhase('diverge');
+                // Reset inputs
+                setInputA("");
+                setInputB("");
+            };
+
+            const initiateBattle = async () => {
+                setPhase('battle');
+                setBattleLog(["Constructing Reality A...", "Constructing Reality B...", "Analyzing Geopolitical Fallout..."]);
+                
+                // Mock API Delay
+                await new Promise(r => setTimeout(r, 800));
+                setNewsA(generateHeadline(inputA));
+                setBattleLog(prev => [...prev, "Timeline Alpha: News generated."]);
+                
+                await new Promise(r => setTimeout(r, 800));
+                setNewsB(generateHeadline(inputB));
+                setBattleLog(prev => [...prev, "Timeline Omega: News generated."]);
+
+                await new Promise(r => setTimeout(r, 500));
+                setBattleLog(prev => [...prev, "JUDGE AI: Comparing outcomes..."]);
+                
+                // Calculate Result
+                const res = generateMockJudge(inputA, inputB);
+                setResult(res);
+
+                // Animate Bars
+                const steps = 20;
+                for (let i = 0; i <= steps; i++) {
+                    await new Promise(r => setTimeout(r, 50));
+                    setStatsA({
+                        mil: (res.score_a * (i/steps)) * 0.8, 
+                        eco: (res.score_a * (i/steps)) * 1.1, 
+                        tech: (res.score_a * (i/steps)) * 0.9
+                    });
+                    setStatsB({
+                        mil: (res.score_b * (i/steps)) * 1.0, 
+                        eco: (res.score_b * (i/steps)) * 0.9, 
+                        tech: (res.score_b * (i/steps)) * 1.1
+                    });
+                }
+                
+                setPhase('result');
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col relative">
+                    <div className="scanlines"></div>
+                    <Header />
+
+                    <main className="flex-grow container mx-auto px-4 py-8 relative z-10">
+                        
+                        {/* PHASE 1: SELECT SCENARIO */}
+                        {phase === 'select' && (
+                            <div className="animate-fade-in">
+                                <div className="text-center mb-10">
+                                    <h2 className="text-3xl text-yellow-600 cinzel font-bold mb-2">Select a Flashpoint</h2>
+                                    <p className="text-gray-400">Choose a moment in history to rewrite.</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {SCENARIOS.map(s => (
+                                        <ScenarioCard key={s.id} scenario={s} onClick={handleSelectScenario} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* PHASE 2: DIVERGENCE INPUT */}
+                        {phase === 'diverge' && selectedScenario && (
+                            <div className="max-w-5xl mx-auto animate-fade-in">
+                                <button onClick={() => setPhase('select')} className="text-gray-500 hover:text-white mb-6 text-sm uppercase tracking-widest flex items-center gap-2">
+                                    ← Back to Timeline Selection
+                                </button>
+                                
+                                <div className="bg-gray-900 border border-gray-800 p-8 mb-8 text-center">
+                                    <span className="text-yellow-600 text-xs font-bold tracking-[0.3em] uppercase">{selectedScenario.year}</span>
+                                    <h2 className="text-4xl text-white cinzel font-bold my-2">{selectedScenario.title}</h2>
+                                    <p className="text-gray-400 italic max-w-2xl mx-auto">"{selectedScenario.context}"</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                    <div>
+                                        <DecisionInput 
+                                            side="A"
+                                            label="Player 1: The Intervention"
+                                            placeholder="How do you alter this event? (e.g., 'I warn the Archduke to wear a bulletproof vest...')"
+                                            value={inputA}
+                                            onChange={setInputA}
+                                        />
+                                    </div>
+                                    <div>
+                                        <DecisionInput 
+                                            side="B"
+                                            label="Player 2: The Counter-Move"
+                                            placeholder="How do you alter this event differently? (e.g., 'I supply better weapons to the assassins...')"
+                                            value={inputB}
+                                            onChange={setInputB}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="text-center mt-8">
+                                    <button 
+                                        onClick={initiateBattle}
+                                        disabled={!inputA || !inputB}
+                                        className={`cinzel px-12 py-4 text-xl font-bold uppercase tracking-widest transition-all duration-300 border-2
+                                            ${(!inputA || !inputB) 
+                                                ? 'border-gray-700 text-gray-700 cursor-not-allowed' 
+                                                : 'border-yellow-600 text-yellow-500 hover:bg-yellow-600/10 hover:scale-105 hover:shadow-[0_0_30px_rgba(197,160,89,0.3)]'
+                                            }`}
+                                    >
+                                        Converge Timelines
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* PHASE 3 & 4: BATTLE & RESULT */}
+                        {(phase === 'battle' || phase === 'result') && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                                
+                                {/* Player A Stats */}
+                                <div className="lg:col-span-3 order-2 lg:order-1">
+                                    <div className="bg-black/40 border-t-2 border-blue-600 p-6 h-full">
+                                        <h3 className="text-blue-500 cinzel font-bold text-xl mb-6 text-center">Timeline Alpha</h3>
+                                        <div className="space-y-6">
+                                            <ProgressBar label="Military" value={Math.round(statsA.mil)} colorClass="bg-blue-600" />
+                                            <ProgressBar label="Economy" value={Math.round(statsA.eco)} colorClass="bg-blue-400" />
+                                            <ProgressBar label="Tech" value={Math.round(statsA.tech)} colorClass="bg-cyan-400" />
+                                        </div>
+                                        <div className="mt-8 transform -rotate-1 scale-90 origin-top">
+                                            <Newspaper data={newsA} side="A" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Center Stage */}
+                                <div className="lg:col-span-6 order-1 lg:order-2 flex flex-col gap-4">
+                                    {/* The Battle Log */}
+                                    <div className="bg-black border border-gray-800 p-4 font-mono text-xs text-green-500 h-48 overflow-y-auto shadow-inner">
+                                        {battleLog.map((l, i) => <div key={i} className="mb-1 opacity-80">{l}</div>)}
+                                    </div>
+
+                                    {/* The Verdict Box */}
+                                    <div className={`flex-grow flex items-center justify-center bg-gray-900/50 border border-gray-800 relative overflow-hidden min-h-[300px] transition-all duration-1000 ${result ? 'border-yellow-600' : ''}`}>
+                                        {!result ? (
+                                            <div className="text-center animate-pulse">
+                                                <h2 className="text-4xl cinzel text-gray-700">Simulating Conflict</h2>
+                                                <p className="text-xs text-gray-500 mt-2 uppercase tracking-[0.5em]">Please Wait</p>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center p-8 z-10 animate-fade-in-up">
+                                                <div className="text-yellow-600 text-xs font-bold uppercase tracking-[0.5em] mb-4">Dominant Timeline</div>
+                                                <h1 className="text-5xl md:text-6xl cinzel font-black text-white mb-6 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                                                    {result.winner.toUpperCase()}
+                                                </h1>
+                                                <p className="text-gray-300 font-serif italic leading-relaxed max-w-md mx-auto border-t border-b border-gray-700 py-4">
+                                                    "{result.reasoning}"
+                                                </p>
+                                                <button 
+                                                    onClick={() => setPhase('select')}
+                                                    className="mt-8 text-gray-500 hover:text-white text-xs uppercase tracking-widest transition-colors"
+                                                >
+                                                    Start New Simulation
+                                                </button>
+                                            </div>
+                                        )}
+                                        {/* Background Glow based on winner */}
+                                        {result && (
+                                            <div className={`absolute inset-0 opacity-20 blur-3xl ${result.winner.includes('Alpha') ? 'bg-blue-900' : 'bg-red-900'}`}></div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Player B Stats */}
+                                <div className="lg:col-span-3 order-3">
+                                    <div className="bg-black/40 border-t-2 border-red-600 p-6 h-full">
+                                        <h3 className="text-red-500 cinzel font-bold text-xl mb-6 text-center">Timeline Omega</h3>
+                                        <div className="space-y-6">
+                                            <ProgressBar label="Military" value={Math.round(statsB.mil)} colorClass="bg-red-600" />
+                                            <ProgressBar label="Economy" value={Math.round(statsB.eco)} colorClass="bg-red-400" />
+                                            <ProgressBar label="Tech" value={Math.round(statsB.tech)} colorClass="bg-orange-400" />
+                                        </div>
+                                        <div className="mt-8 transform rotate-1 scale-90 origin-top">
+                                            <Newspaper data={newsB} side="B" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        )}
+
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    </style>
 </body>
 </html>
