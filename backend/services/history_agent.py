@@ -4,9 +4,11 @@ from pydantic import BaseModel, Field, ValidationError
 from langgraph.graph import StateGraph, END
 from typing import List, Dict, Any, Optional
 import os
+from dotenv import load_dotenv
 import json
 import logging
 
+load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ def initialize_llm():
         raise ValueError("GOOGLE_API_KEY environment variable not set")
     
     return ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash-exp",
+        model="gemini-2.0-flash",
         temperature=0.3,
         max_output_tokens=2048,
     )
